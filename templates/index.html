@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Baccarat Prediction</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600&display=swap" rel="stylesheet"> <!-- เพิ่มฟอนต์ Sarabun -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css"> <!-- เพิ่ม Font Awesome -->
+    <style>
+        body {
+            font-family: 'Sarabun', sans-serif; /* ใช้ฟอนต์ Sarabun */
+        }
+        .circle {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            margin: 5px;
+            color: white; /* เปลี่ยนให้เป็นสีที่เข้ากันกับพื้นหลัง */
+        }
+
+        .banker {
+            background-color: lightcoral; /* Banker: สีแดงอ่อน */
+        }
+
+        .player {
+            background-color: lightblue; /* Player: สีน้ำเงินอ่อน */
+        }
+
+        .tie {
+            background-color: lightgreen; /* Tie: สีเขียวอ่อน */
+        }
+        .highlight {
+            border: 2px solid black; /* Border for the highlighted result */
+        }
+        .loading-icon {
+            background-color: transparent; /* พื้นหลังโปร่งใส */
+            color: #6c757d; /* สีของไอคอน loading */
+            border: none; /* ไม่มีขอบ */
+        }
+        .prediction-row {
+            display: flex;
+            align-items: center;
+        }
+        h1 {
+            font-size: 2rem; /* ขนาดตัวอักษรของ h1 */
+        }
+        h2 {
+            font-size: 1.5rem; /* ปรับขนาดตัวอักษรของ h2 */
+        }
+        .btn {
+            font-weight: 600; /* ปุ่มฟอนต์หนา */
+        }
+        .result-grid {
+            display: grid;
+            grid-template-columns: repeat(12, 1fr); /* กำหนดจำนวนคอลัมน์ที่จะแสดง (12 คอลัมน์) */
+            gap: 10px; /* ระยะห่างระหว่างวงกลม */
+            margin-top: 10px;
+            border: 1px solid #dee2e6; /* เส้นกรอบของกลุ่มผลลัพธ์ */
+            padding: 10px; /* ระยะห่างภายในกล่อง */
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-5">
+        <div class="card mt-4">
+            <div class="card-body">
+                <h2>แนวทางรอบถัดไป</h2>
+                <span class="prediction-highlight d-inline ml-2" id="prediction-result" style="font-size: 1.5rem; font-weight: bold;">
+                    {% if prediction == "Banker" %}
+                        <i class="fas fa-circle text-danger mr-1"></i> <!-- ไอคอนวงกลมสีแดงสำหรับ Banker -->
+                        <span class="text-danger">{{ prediction }}</span>
+                    {% elif prediction == "Player" %}
+                        <i class="fas fa-circle text-primary mr-1"></i> <!-- ไอคอนวงกลมสีน้ำเงินสำหรับ Player -->
+                        <span class="text-primary">{{ prediction }}</span>
+                    {% elif prediction == "Tie" %}
+                        <i class="fas fa-circle text-success mr-1"></i> <!-- ไอคอนวงกลมสีเขียวสำหรับ Tie -->
+                        <span class="text-success">{{ prediction }}</span>
+                    {% else %}
+                        <span>{{ prediction }}</span>
+                    {% endif %}
+                </span>
+                <div class="prediction-row mt-2">
+                    <div class="mr-3">Banker: <span class="text-danger">{{ probabilities[0] }}%</span></div>
+                    <div class="mr-3">Player: <span class="text-primary">{{ probabilities[1] }}%</span></div>
+                    <div>Tie: <span class="text-success">{{ probabilities[2] }}%</span></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mt-4">
+            <div class="card-body">
+                <form action="/submit" method="post">
+                    <div class="form-group">
+                        <label for="result">เลือกผลลัพธ์จริง:</label>
+                        <select name="result" id="result" class="form-control" onchange="updatePrediction()">
+                            <option value="Banker" {% if prediction == "Banker" %} selected {% endif %}>Banker</option>
+                            <option value="Player" {% if prediction == "Player" %} selected {% endif %}>Player</option>
+                            <option value="Tie" {% if prediction == "Tie" %} selected {% endif %}>Tie</option>
+                        </select>
+                    </div>
+                
+                    <button type="submit" class="btn btn-primary">ส่งผลลัพธ์</button> <!-- ปุ่มส่งผลลัพธ์ -->
+                </form>
+            </div>
+        </div>
+
+        <div class="card mt-4">
+            <div class="card-body">
+                <h2>ผลในรอบก่อนหน้านี้</h2> <!-- เปลี่ยนจาก Historical Results เป็น ผลในรอบก่อนหน้านี้ -->
+                <div class="result-grid">
+                    {% for result in historical_results[-35:] %} <!-- แสดงเฉพาะ 36 ผลล่าสุด -->
+                        <div class="circle {% if result == 'Banker' %}banker{% elif result == 'Player' %}player{% elif result == 'Tie' %}tie{% endif %} {% if loop.last %}highlight{% endif %}">
+                            {% if result == "Banker" %} B
+                            {% elif result == "Player" %} P
+                            {% elif result == "Tie" %} T
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+
+                    <!-- เพิ่ม icon loading ที่อยู่สุดท้ายเสมอ -->
+                    <div class="circle loading-icon">
+                        <i class="fas fa-spinner fa-spin"></i> <!-- ไอคอน loading -->
+                    </div>
+
+                    {% if historical_results|length == 0 %}
+                        <div class="text-center" colspan="6">ไม่มีผลลัพธ์</div>
+                    {% endif %}
+                </div>
+        
+                {% if historical_results|length < 6 %}
+                    <div class="alert alert-danger mt-3">
+                        กรุณาใส่ผลลัพธ์อย่างน้อย 6 รายการเพื่อเริ่มการทำนาย.
+                    </div>
+                {% endif %}
+        
+                <!-- เพิ่มปุ่มล้างประวัติ -->
+                <form action="/clear_history" method="post" class="mt-3">
+                    <button type="submit" class="btn btn-danger">ล้างประวัติ</button>
+                </form>
+            </div>
+        </div>        
+    </div>
+    
+    <script>
+        function updatePrediction() {
+            var select = document.getElementById("result");
+            var selectedValue = select.value;
+            var predictionResult = document.getElementById("prediction-result");
+            
+            // กำหนดค่าที่จะแสดงใน <span> สำหรับผลลัพธ์ที่เลือก
+            if (selectedValue === "Banker") {
+                predictionResult.innerHTML = '<i class="fas fa-circle text-danger mr-1"></i><span class="text-danger">Banker</span>'; // อัปเดตผลลัพธ์ของแนวทางรอบถัดไป
+            } else if (selectedValue === "Player") {
+                predictionResult.innerHTML = '<i class="fas fa-circle text-primary mr-1"></i><span class="text-primary">Player</span>'; // อัปเดตผลลัพธ์ของแนวทางรอบถัดไป
+            } else if (selectedValue === "Tie") {
+                predictionResult.innerHTML = '<i class="fas fa-circle text-success mr-1"></i><span class="text-success">Tie</span>'; // อัปเดตผลลัพธ์ของแนวทางรอบถัดไป
+            }
+        }
+
+        // เรียกใช้ฟังก์ชันนี้เมื่อโหลดหน้าเพื่อแสดงผลเริ่มต้น
+        window.onload = function() {
+            updatePrediction();
+        };
+    </script>
+</body>
+</html>
