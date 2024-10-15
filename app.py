@@ -4,6 +4,7 @@ import csv
 from sklearn.ensemble import RandomForestClassifier
 from joblib import dump, load
 import logging
+import threading
 
 app = Flask(__name__)
 
@@ -11,7 +12,7 @@ app = Flask(__name__)
 logging.basicConfig(level=logging.INFO)
 
 # กำหนดตัวแปรสำหรับผลลัพธ์ประวัติและการติดตาม
-historical_results = []  # เริ่มต้นด้วยผลลัพธ์ว่าง
+historical_results = []
 data = []
 labels = []
 
@@ -31,13 +32,12 @@ def train_model():
     global data, labels
     data = []
     labels = []
-    if len(historical_results) >= 3:  # ต้องมีผลลัพธ์อย่างน้อย 3 รายการเพื่อฝึก
+    if len(historical_results) >= 3:
         for i in range(2, len(historical_results)):
             last_two = [result_to_numeric(x) for x in historical_results[i-2:i]]
             data.append(last_two)
             labels.append(result_to_numeric(historical_results[i]))
-        model.fit(np.array(data), np.array(labels))  # ฝึกโมเดล
-        # บันทึกโมเดล
+        model.fit(np.array(data), np.array(labels))
         dump(model, 'baccarat_model.joblib')
 
 # ฟังก์ชันสำหรับการคาดการณ์
@@ -51,14 +51,12 @@ def predict_next(results):
 
 @app.route('/')
 def index():
-    prediction, probabilities = "N/A", [0, 0, 0]  # ค่าปริยาย
-    if len(historical_results) >= 6:  # คาดการณ์เฉพาะเมื่อมีข้อมูลเพียงพอ
+    prediction, probabilities = "N/A", [0, 0, 0]
+    if len(historical_results) >= 6:
         try:
             prediction, probabilities = predict_next(historical_results)
         except ValueError:
             prediction = "ต้องการผลลัพธ์อย่างน้อย 6 รายการเพื่อทำการคาดการณ์."
-    
-    # จัดรูปแบบความน่าจะเป็นเป็นทศนิยม 2 ตำแหน่ง
     probabilities = [round(prob, 2) for prob in probabilities]
 
     return render_template('index.html', prediction=prediction, probabilities=probabilities, historical_results=historical_results)
@@ -70,40 +68,41 @@ def submit_result():
         return "ข้อมูลไม่ถูกต้อง กรุณาใส่ Banker, Player, หรือ Tie.", 400
 
     historical_results.append(actual_result)
-    train_model()  # ฝึกโมเดลใหม่ด้วยผลลัพธ์ประวัติที่อัปเดต
+    train_model()
 
-    # บันทึกผลลัพธ์ลงในไฟล์ CSV ในรูปแบบคู่
-    if len(historical_results) > 1:
-        previous_result = historical_results[-2]  # ผลลัพธ์ก่อนหน้า
-        with open('historical_results.csv', mode='a', newline='') as file:
-            writer = csv.writer(file)
-            writer.writerow([previous_result, actual_result])  # บันทึกผลลัพธ์เป็นคู่
-        
-        # เพิ่มการบันทึกข้อมูลที่บันทึกลงในไฟล์ CSV
-        logging.info(f"บันทึกผลลัพธ์: {previous_result}, {actual_result}")
+    # ใช้ล็อกในการบันทึกข้อมูลในไฟล์ CSV
+    threading.Thread(target=write_to_csv, args=(actual_result,)).start()
 
     return redirect(url_for('index'))
+
+def write_to_csv(actual_result):
+    if len(historical_results) > 1:
+        previous_result = historical_results[-2]
+        try:
+            with open('historical_results.csv', mode='a', newline='') as file:
+                writer = csv.writer(file)
+                writer.writerow([previous_result, actual_result])
+                logging.info(f"บันทึกผลลัพธ์: {previous_result}, {actual_result}")
+        except Exception as e:
+            logging.error(f"เกิดข้อผิดพลาดในการบันทึกไฟล์ CSV: {e}")
 
 @app.route('/clear_history', methods=['POST'])
 def clear_history():
     global historical_results
-    historical_results.clear()  # ลบประวัติ
-    # ลบไฟล์ CSV ด้วย
-    open('historical_results.csv', 'w').close()  # ล้างไฟล์ CSV
-    return redirect(url_for('index'))  # กลับไปยังหน้าหลัก
+    historical_results.clear()
+    open('historical_results.csv', 'w').close()
+    return redirect(url_for('index'))
 
 if __name__ == "__main__":
-    # ฝึกโมเดลโดยใช้ข้อมูลที่มีอยู่ในไฟล์ CSV
     try:
         model = load('baccarat_model.joblib')
     except Exception as e:
         logging.warning(f"ไม่สามารถโหลดโมเดล: {e}")
 
-    # อ่านผลลัพธ์จากไฟล์ CSV สำหรับการคาดการณ์
     try:
         with open('historical_results.csv', mode='r') as file:
             reader = csv.reader(file)
-            historical_results = [row[1] for row in reader if row]  # อ่านผลลัพธ์ทั้งหมด
+            historical_results = [row[1] for row in reader if row]
     except FileNotFoundError:
         logging.warning("ไม่พบไฟล์ historical_results.csv, จะเริ่มต้นด้วยประวัติผลลัพธ์ว่าง")
 
