@@ -85,11 +85,11 @@ def submit_result():
 def clear_history():
     global historical_results
     historical_results.clear()  # ลบประวัติ
+    # ลบไฟล์ CSV ด้วย
+    open('historical_results.csv', 'w').close()  # ล้างไฟล์ CSV
     return redirect(url_for('index'))  # กลับไปยังหน้าหลัก
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=10000)
-
     # ฝึกโมเดลโดยใช้ข้อมูลที่มีอยู่ในไฟล์ CSV
     try:
         model = load('baccarat_model.joblib')
@@ -97,15 +97,11 @@ if __name__ == "__main__":
         logging.warning(f"ไม่สามารถโหลดโมเดล: {e}")
 
     # อ่านผลลัพธ์จากไฟล์ CSV สำหรับการคาดการณ์
-    historical_results_from_csv = []
     try:
         with open('historical_results.csv', mode='r') as file:
             reader = csv.reader(file)
-            historical_results_from_csv = [row[1] for row in reader if row]  # อ่านผลลัพธ์ทั้งหมด
+            historical_results = [row[1] for row in reader if row]  # อ่านผลลัพธ์ทั้งหมด
     except FileNotFoundError:
         logging.warning("ไม่พบไฟล์ historical_results.csv, จะเริ่มต้นด้วยประวัติผลลัพธ์ว่าง")
 
-    # ใช้ข้อมูลจาก historical_results_from_csv สำหรับการคาดการณ์
-    historical_results.extend(historical_results_from_csv)  # เริ่มต้นด้วยข้อมูลจาก CSV
-
-    app.run(debug=True)
+    app.run(host="0.0.0.0", port=10000, debug=True)
