@@ -67,6 +67,7 @@
 </head>
 <body>
     <div class="container mt-5">
+        <button id="toggle-mode" class="btn btn-secondary">สลับโหมด</button>
         <div class="card mt-4">
             <div class="card-body">
                 <h2>แนวทางรอบถัดไป</h2>
@@ -161,7 +162,13 @@
                 predictionResult.innerHTML = '<i class="fas fa-circle text-success mr-1"></i><span class="text-success">Tie</span>'; // อัปเดตผลลัพธ์ของแนวทางรอบถัดไป
             }
         }
-
+        
+        document.getElementById("toggle-mode").onclick = function() {
+            document.body.classList.toggle("dark-mode");
+            const isDarkMode = document.body.classList.contains("dark-mode");
+            this.innerText = isDarkMode ? "โหมดสว่าง" : "โหมดมืด"; 
+        };
+        
         // เรียกใช้ฟังก์ชันนี้เมื่อโหลดหน้าเพื่อแสดงผลเริ่มต้น
         window.onload = function() {
             updatePrediction();
