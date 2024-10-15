@@ -42,7 +42,7 @@
         }
         .result-grid {
             display: grid;
-            grid-template-columns: repeat(12, 1fr); 
+            grid-template-columns: repeat(auto-fill, minmax(40px, 1fr)); 
             gap: 10px; 
             margin-top: 10px;
             border: 1px solid #6c757d; 
@@ -82,7 +82,7 @@
                             <option value="Tie" {% if prediction == "Tie" %} selected {% endif %}>Tie</option>
                         </select>
                     </div>
-                    <button type="submit" class="btn btn-primary">ส่งผลลัพธ์</button>
+                    <button type="submit" class="btn btn-primary btn-block">ส่งผลลัพธ์</button>
                 </form>
             </div>
         </div>
@@ -110,7 +110,7 @@
                     </div>
                 {% endif %}
                 <form action="/clear_history" method="post" class="mt-3">
-                    <button type="submit" class="btn btn-danger">ล้างประวัติ</button>
+                    <button type="submit" class="btn btn-danger btn-block">ล้างประวัติ</button>
                 </form>
             </div>
         </div>        
