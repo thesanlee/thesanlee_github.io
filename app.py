@@ -87,7 +87,9 @@ def clear_history():
     historical_results.clear()  # ลบประวัติ
     return redirect(url_for('index'))  # กลับไปยังหน้าหลัก
 
-if __name__ == '__main__':
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=10000)
+
     # ฝึกโมเดลโดยใช้ข้อมูลที่มีอยู่ในไฟล์ CSV
     try:
         model = load('baccarat_model.joblib')
