@@ -78,6 +78,9 @@ def submit_result():
         with open('historical_results.csv', mode='a', newline='') as file:
             writer = csv.writer(file)
             writer.writerow([previous_result, actual_result])  # บันทึกผลลัพธ์เป็นคู่
+        
+        # เพิ่มการบันทึกข้อมูลที่บันทึกลงในไฟล์ CSV
+        logging.info(f"บันทึกผลลัพธ์: {previous_result}, {actual_result}")
 
     return redirect(url_for('index'))
 
